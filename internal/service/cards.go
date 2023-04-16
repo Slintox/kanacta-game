@@ -5,29 +5,40 @@ import (
 	"math/rand"
 )
 
+var DecksNum = 2
+
 type CardType string
 
 const (
-	CardTypeDefault CardType = "default"
-	CardTypeTrump   CardType = "trump"
+	CardTypeDefault   CardType = "default"
+	CardTypeTrump     CardType = "trump"
+	CardTypePremium3  CardType = "premium_3"
+	CardTypeBlocking3 CardType = "blocking_3"
+	CardTypeJoker     CardType = "joker"
 )
 
 // Suits
 const (
-	CardSuitSpades   = "Пики"
-	CardSuitHearts   = "Черви"
-	CardSuitClubs    = "Трефы"
-	CardSuitDiamonds = "Бубны"
+	CardSuitSpades   = "Пики"   // Черные
+	CardSuitHearts   = "Черви"  // Красные
+	CardSuitClubs    = "Трефы"  // Черные
+	CardSuitDiamonds = "Бубны"  // Красные
+	CardSuitJoker    = "Джокер" // Красные и черные
+
+	CardColorRed   = "Красная"
+	CardColorBlack = "Черная"
 
 	CardSuitSymbolSpades   = "♠"
 	CardSuitSymbolHearts   = "♥"
 	CardSuitSymbolClubs    = "♣"
 	CardSuitSymbolDiamonds = "♦"
+	CardSuitSymbolJoker    = ""
 )
 
 type CardSuit struct {
 	Name   string `json:"name"`
 	Symbol string `json:"symbol"`
+	Color  string `json:"color"`
 }
 
 func GenerateCardSuits() []CardSuit {
@@ -37,18 +48,41 @@ func GenerateCardSuits() []CardSuit {
 		{
 			Name:   CardSuitSpades,
 			Symbol: CardSuitSymbolSpades,
+			Color:  CardColorBlack,
 		},
 		{
 			Name:   CardSuitHearts,
 			Symbol: CardSuitSymbolHearts,
+			Color:  CardColorRed,
 		},
 		{
 			Name:   CardSuitClubs,
 			Symbol: CardSuitSymbolClubs,
+			Color:  CardColorBlack,
 		},
 		{
 			Name:   CardSuitDiamonds,
 			Symbol: CardSuitSymbolDiamonds,
+			Color:  CardColorRed,
+		},
+	}
+
+	return cs
+}
+
+func GenerateCardJokerSuits() []CardSuit {
+	var cs []CardSuit
+
+	cs = []CardSuit{
+		{
+			Name:   CardSuitJoker,
+			Symbol: CardSuitSymbolJoker,
+			Color:  CardColorBlack,
+		},
+		{
+			Name:   CardSuitJoker,
+			Symbol: CardSuitSymbolJoker,
+			Color:  CardColorRed,
 		},
 	}
 
@@ -65,6 +99,7 @@ const (
 	CardValue7
 	CardValue8
 	CardValue9
+	CardValue10
 	CardValueJ
 	CardValueQ
 	CardValueK
@@ -82,6 +117,7 @@ const (
 	CardName7     = "7"
 	CardName8     = "8"
 	CardName9     = "9"
+	CardName10    = "10"
 	CardNameJ     = "J"
 	CardNameQ     = "Q"
 	CardNameK     = "K"
@@ -97,6 +133,8 @@ const (
 	CardCostJoker  = 50
 )
 
+// Card игральная карта.
+// TODO (17.04.2023): добавить FullName
 type Card struct {
 	CardSuit *CardSuit `json:"cardSuit"`
 	Value    int       `json:"value"`
@@ -116,7 +154,7 @@ var UniqueCards = []Card{
 		Value: CardValue3,
 		Name:  CardName3,
 		Cost:  CardCostSmall,
-		Type:  CardTypeDefault,
+		Type:  CardTypeBlocking3,
 	},
 	{
 		Value: CardValue4,
@@ -155,6 +193,12 @@ var UniqueCards = []Card{
 		Type:  CardTypeDefault,
 	},
 	{
+		Value: CardValue10,
+		Name:  CardName10,
+		Cost:  CardCostMiddle,
+		Type:  CardTypeDefault,
+	},
+	{
 		Value: CardValueJ,
 		Name:  CardNameJ,
 		Cost:  CardCostMiddle,
@@ -178,12 +222,6 @@ var UniqueCards = []Card{
 		Cost:  CardCostBig,
 		Type:  CardTypeDefault,
 	},
-	{
-		Value: CardValueJoker,
-		Name:  CardNameJoker,
-		Cost:  CardCostJoker,
-		Type:  CardTypeTrump,
-	},
 }
 
 type Canasta struct {
@@ -192,6 +230,8 @@ type Canasta struct {
 
 func GenerateKanasta(uniqueKey int64, swapsNum int) *Canasta {
 	kanasta := &Canasta{}
+
+	kanasta.FillCards()
 
 	kanasta.SwapCanasta(uniqueKey, swapsNum)
 
@@ -202,12 +242,31 @@ func GenerateKanasta(uniqueKey int64, swapsNum int) *Canasta {
 func (k *Canasta) FillCards() {
 	cSuits := GenerateCardSuits()
 
-	for i := range cSuits {
-		for _, uniqueCard := range UniqueCards {
+	cJokerSuits := GenerateCardJokerSuits()
 
-			uniqueCard.CardSuit = &cSuits[i]
+	for d := 0; d < DecksNum; d++ {
+		for i := range cSuits {
+			for _, uniqueCard := range UniqueCards {
 
-			k.cards = append(k.cards, uniqueCard)
+				uniqueCard.CardSuit = &cSuits[i]
+
+				// Устанавливаем типы карт для красных троек
+				if uniqueCard.Name == CardName3 && (uniqueCard.CardSuit.Color == CardColorRed) {
+					uniqueCard.Type = CardTypePremium3
+				}
+
+				k.cards = append(k.cards, uniqueCard)
+			}
+		}
+
+		for i := 0; i < 3; i++ {
+			k.cards = append(k.cards, Card{
+				CardSuit: &cJokerSuits[(i+DecksNum)%2],
+				Value:    CardValueJoker,
+				Name:     CardNameJoker,
+				Cost:     CardCostJoker,
+				Type:     CardTypeJoker,
+			})
 		}
 	}
 }

@@ -1,13 +1,11 @@
 package app
 
 import (
-	canasta "github.com/Slintox/kanacta-game/internal/service"
+	"github.com/Slintox/kanacta-game/internal/service"
 )
 
 func Run() {
-	kanacta := canasta.GenerateKanasta(42, 250)
-
-	kanacta.FillCards()
+	kanacta := service.GenerateKanasta(42, 250)
 
 	//unifier := time.Now().Unix()
 	//rand.Seed(unifier)
